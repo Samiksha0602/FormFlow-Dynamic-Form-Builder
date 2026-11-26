@@ -48,10 +48,14 @@ export default function PublicFormPage({ slug }) {
       const keys = Object.keys(groups)
       setProgress({ done: keys.filter((k) => groups[k]).length, total: keys.length })
     }
-    measure()
-    root.addEventListener('input', measure)
-    root.addEventListener('change', measure)
-    return () => { root.removeEventListener('input', measure); root.removeEventListener('change', measure) }
+    // Defer to a macrotask so React finishes handling the keystroke first.
+    // Updating state synchronously here makes React revert the controlled input.
+    let timer
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(measure, 0) }
+    schedule()
+    root.addEventListener('input', schedule)
+    root.addEventListener('change', schedule)
+    return () => { clearTimeout(timer); root.removeEventListener('input', schedule); root.removeEventListener('change', schedule) }
   }, [form])
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
 
